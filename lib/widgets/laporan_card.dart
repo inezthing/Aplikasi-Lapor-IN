@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
-import '../models/app_state.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../models/laporan_model.dart';
+import '../utils/constants.dart';
+import '../utils/helpers.dart';
+import 'status_badge.dart';
 
 class LaporanCard extends StatelessWidget {
   final LaporanModel laporan;
   final VoidCallback onTap;
+  final bool showPetugas;
 
-  const LaporanCard({required this.laporan, required this.onTap, Key? key})
-      : super(key: key);
-
-  String _formatDate(DateTime dt) {
-    const months = [
-      '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
-    ];
-    return '${dt.day} ${months[dt.month]} ${dt.year}';
-  }
+  const LaporanCard({
+    required this.laporan,
+    required this.onTap,
+    this.showPetugas = false,
+    Key? key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -23,11 +24,11 @@ class LaporanCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFEEF3FF)),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.border),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF1A6BFF).withOpacity(0.05),
+              color: AppColors.primary.withOpacity(0.05),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -35,21 +36,23 @@ class LaporanCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Foto thumbnail
+            // Thumbnail foto
             ClipRRect(
-              borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
-              child: laporan.fotoPath != null
-                  ? Image.network(
-                      laporan.fotoPath!,
+              borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(AppRadius.lg)),
+              child: laporan.fotoUrl != null
+                  ? CachedNetworkImage(
+                      imageUrl: laporan.fotoUrl!,
                       width: 90,
-                      height: 100,
+                      height: 110,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _placeholder(),
+                      placeholder: (_, __) => _imagePlaceholder(),
+                      errorWidget: (_, __, ___) => _imagePlaceholder(),
                     )
-                  : _placeholder(),
+                  : _imagePlaceholder(),
             ),
 
-            // Content
+            // Konten
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(12),
@@ -59,27 +62,11 @@ class LaporanCard extends StatelessWidget {
                     // Kategori + status
                     Row(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEEF3FF),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            laporan.kategori,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Color(0xFF1A6BFF),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
+                        _kategoriBadge(laporan.kategori),
                         const Spacer(),
-                        _StatusDot(status: laporan.status),
+                        StatusBadge(status: laporan.status, small: true),
                       ],
                     ),
-
                     const SizedBox(height: 6),
 
                     // Judul
@@ -88,50 +75,67 @@ class LaporanCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF1A1A2E),
+                        color: AppColors.textPrimary,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-
                     const SizedBox(height: 4),
 
-                    // Deskripsi
+                    // Deskripsi singkat
                     Text(
                       laporan.deskripsi,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade500,
-                        height: 1.3,
-                      ),
+                      style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textHint,
+                          height: 1.3),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-
                     const SizedBox(height: 8),
 
                     // Lokasi + tanggal
                     Row(
                       children: [
                         const Icon(Icons.location_on_outlined,
-                            size: 12, color: Color(0xFF8A94A6)),
+                            size: 12, color: AppColors.textHint),
                         const SizedBox(width: 3),
                         Expanded(
                           child: Text(
                             laporan.lokasi,
                             style: const TextStyle(
-                                fontSize: 11, color: Color(0xFF8A94A6)),
+                                fontSize: 11, color: AppColors.textHint),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         Text(
-                          _formatDate(laporan.tanggal),
+                          Helpers.formatDate(laporan.createdAt),
                           style: const TextStyle(
-                              fontSize: 10, color: Color(0xFF8A94A6)),
+                              fontSize: 10, color: AppColors.textHint),
                         ),
                       ],
                     ),
+
+                    // Info petugas (opsional)
+                    if (showPetugas && laporan.petugasNama != null) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          const Icon(Icons.engineering_outlined,
+                              size: 12, color: AppColors.primary),
+                          const SizedBox(width: 4),
+                          Text(
+                            laporan.petugasNama!,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -139,9 +143,9 @@ class LaporanCard extends StatelessWidget {
 
             // Arrow
             const Padding(
-              padding: EdgeInsets.only(right: 8),
+              padding: EdgeInsets.only(right: 10),
               child: Icon(Icons.chevron_right_rounded,
-                  color: Color(0xFF8A94A6), size: 18),
+                  color: AppColors.textHint, size: 18),
             ),
           ],
         ),
@@ -149,34 +153,28 @@ class LaporanCard extends StatelessWidget {
     );
   }
 
-  Widget _placeholder() {
+  Widget _imagePlaceholder() {
     return Container(
       width: 90,
-      height: 100,
-      color: const Color(0xFFEEF3FF),
-      child: const Icon(Icons.image_outlined, color: Color(0xFF1A6BFF), size: 28),
+      height: 110,
+      color: AppColors.primaryBg,
+      child: const Icon(Icons.image_outlined, color: AppColors.primary, size: 28),
     );
   }
-}
 
-class _StatusDot extends StatelessWidget {
-  final StatusLaporan status;
-  const _StatusDot({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _kategoriBadge(String kategori) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: status.bgColor,
+        color: AppColors.primaryBg,
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
-        status.label,
-        style: TextStyle(
+        kategori,
+        style: const TextStyle(
           fontSize: 10,
-          fontWeight: FontWeight.w600,
-          color: status.color,
+          color: AppColors.primary,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );
