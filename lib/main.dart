@@ -5,13 +5,14 @@ import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'services/supabase_service.dart';
 import 'controllers/auth_controller.dart';
 import 'controllers/laporan_controller.dart';
 import 'controllers/kasus_controller.dart';
+import 'controllers/admin_controller.dart'; // tetap dibutuhkan untuk MultiProvider
 import 'utils/constants.dart';
 import 'views/auth/login_view.dart';
 import 'views/home/home_view.dart';
+import 'views/admin/admin_home_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,13 +28,15 @@ void main() async {
     ),
   );
 
+  // FIX: hanya inisialisasi Supabase sekali, tanpa memanggil SupabaseService.initialize()
   await Supabase.initialize(
-    url: 'https://vzbqopaeaijfpcrlenfc.supabase.co',     
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6YnFvcGFlYWlqZnBjcmxlbmZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2MDMyODYsImV4cCI6MjA5MjE3OTI4Nn0.05SuESHLN26Zh5_IfYpmQ_RUz6MvzmnaFkJ-Rq-cLI0',
+    url: 'https://vzbqopaeaijfpcrlenfc.supabase.co',
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6YnFvcGFlYWlqZnBjcmxlbmZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2MDMyODYsImV4cCI6MjA5MjE3OTI4Nn0.05SuESHLN26Zh5_IfYpmQ_RUz6MvzmnaFkJ-Rq-cLI0',
+    authOptions: const FlutterAuthClientOptions(
+      authFlowType: AuthFlowType.pkce,
+    ),
   );
-
-  // Inisialisasi Supabase
-  await SupabaseService.initialize();
 
   runApp(const MyApp());
 }
@@ -48,6 +51,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthController()),
         ChangeNotifierProvider(create: (_) => LaporanController()),
         ChangeNotifierProvider(create: (_) => KasusController()),
+        // FIX: AdminController wajib didaftarkan agar bisa diakses di seluruh app
+        ChangeNotifierProvider(create: (_) => AdminController()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -197,14 +202,20 @@ class _SplashRouterState extends State<_SplashRouter> {
     if (!mounted) return;
 
     if (session != null) {
-      // Ada sesi aktif — load profil lalu masuk
+      // Ada sesi aktif — load profil (termasuk role)
       final authCtrl = context.read<AuthController>();
       await authCtrl.loadCurrentUserProfile();
 
       if (!mounted) return;
+
+      // Cek role dari profil yang sudah diload — tanpa perlu AdminController
+      final isAdmin = authCtrl.currentUser?.isAdmin ?? false;
+
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const HomeView()),
+        MaterialPageRoute(
+          builder: (_) => isAdmin ? const AdminHomeView() : const HomeView(),
+        ),
       );
     } else {
       // Tidak ada sesi — ke login

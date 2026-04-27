@@ -8,6 +8,7 @@ import '../../utils/helpers.dart';
 import 'register_view.dart';
 import 'verify_email_view.dart';
 import '../home/home_view.dart';
+import '../admin/admin_home_view.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({Key? key}) : super(key: key);
@@ -59,7 +60,14 @@ class _LoginViewState extends State<LoginView>
 
     if (!mounted) return;
 
-    if (result == 'verified') {
+    if (result == 'admin') {
+      // Admin: langsung ke AdminHomeView tanpa perlu AdminController di sini
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminHomeView()),
+        (_) => false,
+      );
+    } else if (result == 'verified') {
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const HomeView()),
@@ -69,8 +77,7 @@ class _LoginViewState extends State<LoginView>
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) =>
-              VerifyEmailView(email: _emailCtrl.text.trim()),
+          builder: (_) => VerifyEmailView(email: _emailCtrl.text.trim()),
         ),
       );
     } else if (result == 'error') {

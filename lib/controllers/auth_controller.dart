@@ -85,10 +85,10 @@ class AuthController extends ChangeNotifier {
 
   // ─────────────────────────────────────────────
   // SIGN IN
-  // Login dan cek apakah email sudah diverifikasi.
+  // Login dan cek role + verifikasi email.
   // ─────────────────────────────────────────────
 
-  /// Return: 'verified' | 'unverified' | 'error'
+  /// Return: 'admin' | 'verified' | 'unverified' | 'error'
   Future<String> signIn({
     required String email,
     required String password,
@@ -99,16 +99,25 @@ class AuthController extends ChangeNotifier {
     try {
       await _authService.signIn(email: email, password: password);
 
-      // Cek verifikasi email
+      // Ambil profil (termasuk kolom role)
+      final profile = await _authService.fetchCurrentUserProfile();
+
+      if (profile?.role == 'admin') {
+        // Admin: skip verifikasi email, langsung masuk
+        _currentUser = profile;
+        notifyListeners();
+        return 'admin';       // ← LoginView routing ke AdminHomeView
+      }
+
+      // User biasa: wajib verifikasi email
       final isVerified = await _authService.checkEmailVerified();
       if (!isVerified) {
-        // Langsung logout — tidak boleh masuk sebelum verifikasi
         await _authService.signOut();
         return 'unverified';
       }
 
-      // Ambil data profil
-      await loadCurrentUserProfile();
+      _currentUser = profile;
+      notifyListeners();
       return 'verified';
     } on Exception catch (e) {
       _setError(_parseSupabaseError(e.toString()));

@@ -85,12 +85,13 @@ class AuthService {
   // ─────────────────────────────────────────────
 
   /// Ambil data profil user yang sedang login dari tabel profiles.
+  /// FIX: select('*') agar kolom role ikut terbaca
   Future<UserModel?> fetchCurrentUserProfile() async {
     final userId = _db.currentUserId;
     if (userId == null) return null;
 
     final data = await _db.profilesTable
-        .select()
+        .select('*')
         .eq('id', userId)
         .maybeSingle();
 

@@ -54,16 +54,14 @@ class SupabaseService {
       client.storage.from(SupabaseConfig.laporanPhotoBucket);
 
   // ─────────────────────────────────────────────
-  // INISIALISASI — dipanggil di main.dart
+  // INISIALISASI — sudah dipanggil di main.dart
+  // Method ini dipertahankan untuk backward-compatibility
+  // tapi TIDAK memanggil Supabase.initialize lagi (sudah di main.dart)
   // ─────────────────────────────────────────────
 
   static Future<void> initialize() async {
-    await Supabase.initialize(
-      url: SupabaseConfig.url,
-      anonKey: SupabaseConfig.anonKey,
-      authOptions: const FlutterAuthClientOptions(
-        authFlowType: AuthFlowType.pkce,
-      ),
-    );
+    // FIX: Supabase.initialize sudah dipanggil di main.dart dengan PKCE.
+    // Jangan panggil lagi di sini — akan throw StateError.
+    // Method ini dibiarkan agar tidak ada compile error jika masih direferensikan.
   }
 }

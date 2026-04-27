@@ -25,10 +25,14 @@ class _KasusListViewState extends State<KasusListView>
   void initState() {
     super.initState();
     _tabCtrl = TabController(length: 2, vsync: this);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<LaporanController>().getAvailableLaporan();
-      context.read<KasusController>().getMyActiveCases();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadAll());
+  }
+
+  Future<void> _loadAll() async {
+    await Future.wait([
+      context.read<LaporanController>().getAvailableLaporan(),
+      context.read<KasusController>().getMyActiveCases(),
+    ]);
   }
 
   @override
@@ -43,7 +47,6 @@ class _KasusListViewState extends State<KasusListView>
     final lapCtrl = context.watch<LaporanController>();
     final kasusCtrl = context.watch<KasusController>();
 
-    // Filter laporan tersedia
     final available = lapCtrl.availableLaporan.where((l) {
       final matchStatus =
           _filterStatus == null || l.status == _filterStatus;
@@ -54,12 +57,10 @@ class _KasusListViewState extends State<KasusListView>
       return matchStatus && matchSearch;
     }).toList();
 
-    // Filter kasus saya
     final myKasus = kasusCtrl.myActiveCases.where((k) {
-      final matchSearch = _search.isEmpty ||
+      return _search.isEmpty ||
           k.judul.toLowerCase().contains(_search.toLowerCase()) ||
           k.lokasi.toLowerCase().contains(_search.toLowerCase());
-      return matchSearch;
     }).toList();
 
     return Scaffold(
@@ -95,7 +96,7 @@ class _KasusListViewState extends State<KasusListView>
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${lapCtrl.availableLaporan.length} tersedia · ${kasusCtrl.myActiveCases.length} saya tangani',
+                          '${available.length} tersedia · ${myKasus.length} saya tangani',
                           style: const TextStyle(
                               color: Colors.white70, fontSize: 13),
                         ),
@@ -129,7 +130,7 @@ class _KasusListViewState extends State<KasusListView>
         ],
         body: Column(
           children: [
-            // Search + filter bar
+            // Search + filter
             Container(
               color: Colors.white,
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
@@ -157,8 +158,7 @@ class _KasusListViewState extends State<KasusListView>
                       filled: true,
                       fillColor: AppColors.background,
                       border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppRadius.md),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                         borderSide: BorderSide.none,
                       ),
                       contentPadding:
@@ -166,7 +166,6 @@ class _KasusListViewState extends State<KasusListView>
                     ),
                   ),
                   const SizedBox(height: 10),
-                  // Filter chips status
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
@@ -187,25 +186,44 @@ class _KasusListViewState extends State<KasusListView>
               ),
             ),
 
-            // Tab content
             Expanded(
               child: TabBarView(
                 controller: _tabCtrl,
                 children: [
-                  // Tab 1: Tersedia
+                  // Tab Tersedia
                   _LaporanList(
                     items: available,
                     isLoading: lapCtrl.isLoading,
                     emptyMsg: 'Tidak ada laporan tersedia',
-                    onRefresh: () => lapCtrl.getAvailableLaporan(),
+                    onRefresh: _loadAll,
+                    onItemTap: (laporanId) async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              DetailKasusView(laporanId: laporanId),
+                        ),
+                      );
+                      // Refresh keduanya setelah balik dari detail
+                      if (mounted) await _loadAll();
+                    },
                   ),
-                  // Tab 2: Kasus Saya
+                  // Tab Kasus Saya
                   _LaporanList(
                     items: myKasus,
                     isLoading: kasusCtrl.isLoading,
                     emptyMsg: 'Kamu belum mengambil kasus apapun',
-                    onRefresh: () => kasusCtrl.getMyActiveCases(),
-                    showPetugas: false,
+                    onRefresh: _loadAll,
+                    onItemTap: (laporanId) async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              DetailKasusView(laporanId: laporanId),
+                        ),
+                      );
+                      if (mounted) await _loadAll();
+                    },
                   ),
                 ],
               ),
@@ -222,8 +240,7 @@ class _KasusListViewState extends State<KasusListView>
       onTap: () => setState(() => _filterStatus = status),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary : AppColors.background,
           borderRadius: BorderRadius.circular(AppRadius.full),
@@ -244,19 +261,22 @@ class _KasusListViewState extends State<KasusListView>
   }
 }
 
+// ─────────────────────────────────────────────
+// LIST WIDGET
+// ─────────────────────────────────────────────
 class _LaporanList extends StatelessWidget {
   final List items;
   final bool isLoading;
   final String emptyMsg;
   final Future<void> Function() onRefresh;
-  final bool showPetugas;
+  final Future<void> Function(String laporanId) onItemTap;
 
   const _LaporanList({
     required this.items,
     required this.isLoading,
     required this.emptyMsg,
     required this.onRefresh,
-    this.showPetugas = true,
+    required this.onItemTap,
   });
 
   @override
@@ -275,8 +295,8 @@ class _LaporanList extends StatelessWidget {
                 size: 60, color: AppColors.border),
             const SizedBox(height: 14),
             Text(emptyMsg,
-                style: const TextStyle(
-                    color: AppColors.textHint, fontSize: 14)),
+                style:
+                    const TextStyle(color: AppColors.textHint, fontSize: 14)),
           ],
         ),
       );
@@ -293,13 +313,8 @@ class _LaporanList extends StatelessWidget {
           final lap = items[i];
           return LaporanCard(
             laporan: lap,
-            showPetugas: showPetugas,
-            onTap: () => Navigator.push(
-              ctx,
-              MaterialPageRoute(
-                builder: (_) => DetailKasusView(laporanId: lap.id),
-              ),
-            ).then((_) => onRefresh()),
+            showPetugas: true,
+            onTap: () => onItemTap(lap.id),
           );
         },
       ),

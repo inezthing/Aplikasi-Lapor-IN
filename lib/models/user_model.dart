@@ -9,6 +9,8 @@ class UserModel {
   final String? lokasi;
   final String? avatarUrl;
   final bool isVerified;
+  // FIX: tambahkan field role untuk mendukung pengecekan admin
+  final String role;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -20,9 +22,12 @@ class UserModel {
     this.lokasi,
     this.avatarUrl,
     this.isVerified = false,
+    this.role = 'user',
     this.createdAt,
     this.updatedAt,
   });
+
+  bool get isAdmin => role == 'admin';
 
   /// Buat UserModel dari Map JSON yang datang dari Supabase
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -36,6 +41,7 @@ class UserModel {
       lokasi: json['lokasi'] as String?,
       avatarUrl: json['avatar_url'] as String?,
       isVerified: json['is_verified'] as bool? ?? false,
+      role: json['role'] as String? ?? 'user',
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'] as String)
           : null,
@@ -55,6 +61,7 @@ class UserModel {
       'lokasi': lokasi,
       'avatar_url': avatarUrl,
       'is_verified': isVerified,
+      'role': role,
     };
   }
 
@@ -66,6 +73,7 @@ class UserModel {
     String? lokasi,
     String? avatarUrl,
     bool? isVerified,
+    String? role,
   }) {
     return UserModel(
       id: id,
@@ -75,11 +83,12 @@ class UserModel {
       lokasi: lokasi ?? this.lokasi,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       isVerified: isVerified ?? this.isVerified,
+      role: role ?? this.role,
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
   }
 
   @override
-  String toString() => 'UserModel(id: $id, fullName: $fullName, email: $email)';
+  String toString() => 'UserModel(id: $id, fullName: $fullName, email: $email, role: $role)';
 }

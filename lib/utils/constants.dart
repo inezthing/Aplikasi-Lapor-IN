@@ -122,6 +122,8 @@ class AppStatus {
   static const String dikerjakan = 'dikerjakan';
   static const String tertunda = 'tertunda';
   static const String selesai = 'selesai';
+  // FIX: tambahkan status valid yang ada di DB
+  static const String diteruskan = 'diteruskan';
 
   static String getLabel(String status) {
     switch (status) {
@@ -133,6 +135,8 @@ class AppStatus {
         return 'Tertunda';
       case selesai:
         return 'Selesai';
+      case diteruskan:
+        return 'Diteruskan ke Pemerintah';
       default:
         return 'Tidak Diketahui';
     }
@@ -148,6 +152,8 @@ class AppStatus {
         return AppColors.statusTertunda;
       case selesai:
         return AppColors.statusSelesai;
+      case diteruskan:
+        return AppColors.warning;
       default:
         return AppColors.textHint;
     }
@@ -163,6 +169,8 @@ class AppStatus {
         return AppColors.statusTertundaBg;
       case selesai:
         return AppColors.statusSelesaiBg;
+      case diteruskan:
+        return const Color(0xFFFFF8E7);
       default:
         return AppColors.background;
     }
