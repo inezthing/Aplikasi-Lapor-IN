@@ -204,7 +204,9 @@ class _KasusListViewState extends State<KasusListView>
                               DetailKasusView(laporanId: laporanId),
                         ),
                       );
-                      // Refresh keduanya setelah balik dari detail
+                      // Selalu refresh kedua list saat kembali dari detail
+                      // (kasus yang diambil akan keluar dari tab Tersedia
+                      //  dan masuk ke tab Kasus Saya otomatis)
                       if (mounted) await _loadAll();
                     },
                   ),

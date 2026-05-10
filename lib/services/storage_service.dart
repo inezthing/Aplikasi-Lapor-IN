@@ -53,13 +53,19 @@ class StorageService {
     required File imageFile,
   }) async {
     final path = Helpers.laporanPhotoPath(laporanId);
+    final ext = imageFile.path.split('.').last.toLowerCase();
+    final contentType = ext == 'png'
+        ? 'image/png'
+        : ext == 'webp'
+            ? 'image/webp'
+            : 'image/jpeg';
 
     await _db.laporanPhotoBucket.upload(
       path,
       imageFile,
-      fileOptions: const FileOptions(
+      fileOptions: FileOptions(
         upsert: false,
-        contentType: 'image/jpeg',
+        contentType: contentType,
       ),
     );
 
@@ -78,13 +84,20 @@ class StorageService {
     required File imageFile,
   }) async {
     final path = Helpers.progressPhotoPath(laporanId);
+    // Deteksi content-type dari ekstensi file agar tidak gagal di PNG/WEBP
+    final ext = imageFile.path.split('.').last.toLowerCase();
+    final contentType = ext == 'png'
+        ? 'image/png'
+        : ext == 'webp'
+            ? 'image/webp'
+            : 'image/jpeg';
 
     await _db.laporanPhotoBucket.upload(
       path,
       imageFile,
-      fileOptions: const FileOptions(
+      fileOptions: FileOptions(
         upsert: false,
-        contentType: 'image/jpeg',
+        contentType: contentType,
       ),
     );
 

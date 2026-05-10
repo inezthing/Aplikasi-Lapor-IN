@@ -71,11 +71,15 @@ class _DetailKasusViewState extends State<DetailKasusView> {
 
     if (!mounted) return;
     if (success) {
-      Helpers.showSuccessSnackbar(context, 'Kasus berhasil diambil!');
+      // Tetap di halaman ini — reload data agar UI berubah ke tampilan petugas
+      // (tombol "Ambil" hilang, muncul tombol tambah progress & selesaikan)
       await _loadData();
-      if (mounted) {
-        await context.read<LaporanController>().getAvailableLaporan();
-      }
+      if (!mounted) return;
+      // Juga refresh list di background agar tab Tersedia/Kasus Saya sudah sinkron
+      // saat user kembali ke halaman list
+      context.read<LaporanController>().getAvailableLaporan();
+      Helpers.showSuccessSnackbar(
+          context, 'Kasus berhasil diambil! Tambahkan progress untuk mulai bekerja.');
     } else {
       Helpers.showErrorSnackbar(
           context, ctrl.errorMessage ?? 'Gagal mengambil kasus.');
@@ -470,12 +474,13 @@ class _DetailKasusViewState extends State<DetailKasusView> {
                           color: AppColors.textPrimary,
                         ),
                       ),
-                      // Tombol Tambah Progress: hanya jika aktif menangani
-                      // dan kasus belum selesai/diteruskan/menunggu verifikasi
+                      // Tombol Tambah Progress: tampil jika aktif menangani,
+                      // kasus belum selesai/diteruskan, dan belum menunggu verifikasi
+                      // KECUALI jika bukti_kurang — admin minta tambah bukti lagi
                       if (isMyCase &&
                           !isSelesai &&
-                          !isMenungguVerifikasi &&
-                          !isDiteruskan)
+                          !isDiteruskan &&
+                          (!isMenungguVerifikasi || isBuktiKurang))
                         TextButton.icon(
                           onPressed: () => Navigator.push(
                             context,
@@ -857,4 +862,3 @@ class _InfoBanner extends StatelessWidget {
     );
   }
 }
-

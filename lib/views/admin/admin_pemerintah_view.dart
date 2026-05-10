@@ -356,6 +356,7 @@ class _KasusPemerintahCard extends StatelessWidget {
               if (ok) {
                 Helpers.showSuccessSnackbar(
                     context, 'Kasus berhasil diteruskan ke pemerintah!');
+                await ctrl.loadDashboard();
               } else {
                 Helpers.showErrorSnackbar(
                     context, ctrl.errorMessage ?? 'Gagal.');
@@ -427,6 +428,7 @@ class _KasusPemerintahCard extends StatelessWidget {
               if (ok) {
                 Helpers.showInfoSnackbar(context,
                     'Kasus ditolak dan dikembalikan ke daftar tersedia.');
+                await ctrl.loadDashboard();
               } else {
                 Helpers.showErrorSnackbar(
                     context, ctrl.errorMessage ?? 'Gagal.');

@@ -162,7 +162,9 @@ class KasusController extends ChangeNotifier {
           .map((json) => LaporanModel.fromJson(json))
           .toList();
       notifyListeners();
-    } on Exception catch (_) {}
+    } on Exception catch (e) {
+      _setError('Gagal memuat kasus saya: ${e.toString()}');
+    }
   }
 
   // ─────────────────────────────────────────────
@@ -181,11 +183,26 @@ class KasusController extends ChangeNotifier {
       _setLoading(false);
       return false;
     }
+
+    // Verifikasi file foto masih valid dan bisa dibaca
+    if (!fotoFile.existsSync()) {
+      _setError('File foto tidak ditemukan. Silakan pilih foto ulang.');
+      _setLoading(false);
+      return false;
+    }
+
     try {
-      final fotoUrl = await _storageService.uploadProgressPhoto(
-        laporanId: laporanId,
-        imageFile: fotoFile,
-      );
+      String fotoUrl;
+      try {
+        fotoUrl = await _storageService.uploadProgressPhoto(
+          laporanId: laporanId,
+          imageFile: fotoFile,
+        );
+      } on Exception catch (e) {
+        _setError('Gagal mengunggah foto: ${e.toString()}. Pastikan koneksi internet stabil dan coba lagi.');
+        return false;
+      }
+
       final now = DateTime.now();
       await _db.progressTable.insert({
         'laporan_id': laporanId,
@@ -198,9 +215,8 @@ class KasusController extends ChangeNotifier {
       });
       await _db.laporanTable.update({
         'updated_at': now.toIso8601String(),
-        // FIX: reset verifikasi_status jika sebelumnya 'bukti_kurang'
+        // Reset verifikasi_status jika sebelumnya 'bukti_kurang'
         // supaya tombol "Selesaikan" bisa ditekan lagi
-        // Gunakan null — bukan nilai enum yang tidak valid
         'verifikasi_status': null,
       }).eq('id', laporanId);
       await getProgressByLaporan(laporanId);

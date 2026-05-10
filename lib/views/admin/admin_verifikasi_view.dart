@@ -276,6 +276,8 @@ class _KasusVerifikasiCard extends StatelessWidget {
               if (ok) {
                 Helpers.showSuccessSnackbar(
                     context, 'Kasus berhasil diverifikasi selesai!');
+                // Reload dashboard supaya list admin terupdate
+                await ctrl.loadDashboard();
               } else {
                 Helpers.showErrorSnackbar(
                     context, ctrl.errorMessage ?? 'Gagal verifikasi.');
@@ -346,6 +348,8 @@ class _KasusVerifikasiCard extends StatelessWidget {
               if (ok) {
                 Helpers.showInfoSnackbar(
                     context, 'Feedback terkirim ke petugas.');
+                // Reload dashboard supaya list admin terupdate
+                await ctrl.loadDashboard();
               } else {
                 Helpers.showErrorSnackbar(
                     context, ctrl.errorMessage ?? 'Gagal.');
@@ -361,7 +365,7 @@ class _KasusVerifikasiCard extends StatelessWidget {
   }
 }
 
-// Widget untuk load dan tampilkan progress
+// Widget untuk load dan tampilkan progress — pakai local state agar tidak bentrok antar card
 class _DetailProgressSection extends StatefulWidget {
   final String laporanId;
   const _DetailProgressSection({required this.laporanId});
@@ -373,22 +377,38 @@ class _DetailProgressSection extends StatefulWidget {
 
 class _DetailProgressSectionState extends State<_DetailProgressSection> {
   bool _expanded = false;
+  bool _isLoading = false;
+  List<dynamic> _progressList = [];
+
+  Future<void> _loadProgress() async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+    try {
+      await context
+          .read<KasusController>()
+          .getProgressByLaporan(widget.laporanId);
+      if (!mounted) return;
+      // Ambil snapshot dari controller ke local list supaya tidak tercampur antar card
+      setState(() {
+        _progressList = List.from(
+            context.read<KasusController>().currentProgressList);
+      });
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final kasusCtrl = context.watch<KasusController>();
-
     return Column(
       children: [
         // Toggle lihat progress
         InkWell(
           onTap: () async {
             if (!_expanded) {
-              await context
-                  .read<KasusController>()
-                  .getProgressByLaporan(widget.laporanId);
+              await _loadProgress();
             }
-            setState(() => _expanded = !_expanded);
+            if (mounted) setState(() => _expanded = !_expanded);
           },
           child: Padding(
             padding: const EdgeInsets.symmetric(
@@ -407,12 +427,20 @@ class _DetailProgressSectionState extends State<_DetailProgressSection> {
                   ),
                 ),
                 const Spacer(),
-                Icon(
-                  _expanded
-                      ? Icons.keyboard_arrow_up_rounded
-                      : Icons.keyboard_arrow_down_rounded,
-                  color: AppColors.primary,
-                ),
+                if (_isLoading)
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: AppColors.primary),
+                  )
+                else
+                  Icon(
+                    _expanded
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    color: AppColors.primary,
+                  ),
               ],
             ),
           ),
@@ -421,13 +449,13 @@ class _DetailProgressSectionState extends State<_DetailProgressSection> {
           const Divider(height: 1, color: AppColors.border),
           Padding(
             padding: const EdgeInsets.all(16),
-            child: kasusCtrl.currentProgressList.isEmpty
+            child: _progressList.isEmpty
                 ? const Text(
                     'Belum ada progress',
                     style: TextStyle(color: AppColors.textHint),
                   )
                 : Column(
-                    children: kasusCtrl.currentProgressList
+                    children: _progressList
                         .map((p) => ProgressCard(progress: p))
                         .toList(),
                   ),
